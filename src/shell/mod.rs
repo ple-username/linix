@@ -1,8 +1,9 @@
-// REPL Shell for LINIX OS
+// Shell - Updated with Power Management Commands
 
 use spin::Mutex;
 use crate::display::vga::VGA_WRITER;
 use crate::filesystem::FILESYSTEM;
+use crate::power;
 
 const COMMAND_BUFFER_SIZE: usize = 256;
 
@@ -69,10 +70,12 @@ impl Shell {
             "cat" => self.cmd_cat(&parts),
             "touch" => self.cmd_touch(&parts),
             "write" => self.cmd_write(&parts),
-            "reboot" => self.cmd_reboot(),
             "uname" => self.cmd_uname(),
             "about" => self.cmd_about(),
-            _ => println!("Unknown command: {}", parts[0]),
+            "shutdown" => self.cmd_shutdown(),
+            "reboot" => self.cmd_reboot(),
+            "poweroff" => self.cmd_shutdown(),
+            _ => println!("\nUnknown command: {}", parts[0]),
         }
     }
 
@@ -91,7 +94,9 @@ impl Shell {
         println!("  write <file>- Write to file");
         println!("  uname       - Print system info");
         println!("  about       - About LINIX OS");
-        println!("  reboot      - Reboot system\n");
+        println!("  reboot      - Restart the system");
+        println!("  shutdown    - Shutdown the system (ACPI)");
+        println!("  poweroff    - Alias for shutdown\n");
     }
 
     fn cmd_clear(&self) {
@@ -149,16 +154,13 @@ impl Shell {
         }
     }
 
-    fn cmd_reboot(&self) {
-        println!("\nRebooting system...");
-    }
-
     fn cmd_uname(&self) {
         println!("\n═══════════════════════════════════════");
         println!("System Name: LINIX OS");
         println!("Version: 0.1.0 (Rust Edition)");
         println!("Architecture: x86-64");
         println!("Memory: Protected & Managed");
+        println!("Bootloader: Legacy BIOS / UEFI 64-bit");
         println!("═══════════════════════════════════════\n");
     }
 
@@ -173,7 +175,22 @@ impl Shell {
         println!("  ✓ Task management");
         println!("  ✓ Simple filesystem");
         println!("  ✓ Beautiful UI");
-        println!("  ✓ REPL Shell\n");
+        println!("  ✓ REPL Shell");
+        println!("  ✓ ACPI power management\n");
+    }
+
+    fn cmd_shutdown(&self) {
+        println!("\nPreparing system for shutdown...");
+        println!("Flushing buffers...");
+        println!("Closing all services...");
+        power::shutdown();
+    }
+
+    fn cmd_reboot(&self) {
+        println!("\nPreparing system for reboot...");
+        println!("Flushing buffers...");
+        println!("Closing all services...");
+        power::reboot();
     }
 
     fn clear_buffer(&mut self) {

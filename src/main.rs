@@ -1,4 +1,4 @@
-// LINIX OS - Rust Kernel Main
+// LINIX OS - Rust Kernel Main with Full Features
 
 #![no_std]
 #![no_main]
@@ -9,52 +9,116 @@ use core::panic::PanicInfo;
 mod arch;
 mod display;
 mod memory;
+mod drivers;
+mod task;
+mod filesystem;
+mod ui;
+mod shell;
+mod power;
 
 use display::vga::VGA_WRITER;
+use ui::UITheme;
+use shell::SHELL;
 
 /// Kernel entry point (64-bit)
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    // Initialize display
+    // Initialize display first
     display::vga::init_vga();
     
-    println!("\n=== LINIX OS (Rust Edition) ===");
-    println!("64-bit Long Mode Active\n");
+    // Draw beautiful startup screen
+    draw_startup_screen();
     
-    // Initialize memory
+    // Initialize all subsystems
+    arch::init();
     memory::init();
-    println!("Memory management initialized\n");
+    drivers::init();
+    task::init();
+    filesystem::init();
+    ui::init();
+    shell::init();
+    power::init();
     
-    // Print system info
-    print_system_info();
+    // Show welcome message
+    println!("\n");
+    println!("All systems initialized successfully!");
+    println!("Type 'help' for available commands.\n");
     
-    // Main kernel loop
-    loop {
-        asm!("hlt");
-    }
+    // Print shell prompt
+    SHELL.lock().print_prompt();
+    
+    // Main kernel loop - wait for user input
+    kernel_main_loop();
 }
 
-fn print_system_info() {
-    println!("System Information:");
-    println!("  Arch: x86-64");
-    println!("  CPU: Intel/AMD compatible");
-    println!("  Paging: Enabled");
-    println!("  Memory: Protected\n");
-    println!("Kernel is running...");
+fn draw_startup_screen() {
+    let theme = UITheme::default();
+    let mut writer = VGA_WRITER.lock();
+    
+    writer.clear();
+    writer.set_color(theme.primary_color, theme.background_color);
+    
+    println!("\n");
+    println!("  ╔══════════════════════════════════════════════════════════════════╗");
+    println!("  ║                                                         ║");
+    
+    writer.set_color(theme.secondary_color, theme.background_color);
+    println!("  ║           ♥♥♥  LINIX OS v0.1.0  ♥♥♥               ║");
+    
+    writer.set_color(theme.primary_color, theme.background_color);
+    println!("  ║                                                         ║");
+    println!("  ║  A Modern Operating System Written in Rust             ║");
+    println!("  ║  Supporting Legacy BIOS and UEFI 64-bit                ║");
+    println!("  ║                                                         ║");
+    println!("  ║  Features:                                              ║");
+    println!("  ║    ✓ Memory-safe kernel (Rust)                         ║");
+    println!("  ║    ✓ Task management & scheduling                     ║");
+    println!("  ║    ✓ Simple filesystem                                 ║");
+    println!("  ║    ✓ Multiple device drivers                          ║");
+    println!("  ║    ✓ Beautiful UI system                               ║");
+    println!("  ║    ✓ Interactive REPL shell                           ║");
+    println!("  ║    ✓ ACPI power management                            ║");
+    println!("  ║                                                         ║");
+    println!("  ╚══════════════════════════════════════════════════════════════════╝\n");
+    
+    writer.set_color(theme.text_color, theme.background_color);
+}
+
+fn kernel_main_loop() -> ! {
+    loop {
+        // In a real implementation, this would handle interrupts
+        // For now, we'll just halt
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
 }
 
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("\n!!! KERNEL PANIC !!!");
+    let mut writer = VGA_WRITER.lock();
+    writer.set_color(display::vga::Color::LightRed, display::vga::Color::Black);
+    
+    println!("\n\n");
+    println!("  ╔══════════════════════════════════════════════════════════════════╗");
+    println!("  ║              ⚠  KERNEL PANIC  ⚠                   ║");
+    println!("  ╚══════════════════════════════════════════════════════════════════╝\n");
+    
     if let Some(location) = info.location() {
-        println!("Location: {}:{}", location.file(), location.line());
+        println!("\n  Location: {}:{}", location.file(), location.line());
     }
+    
     if let Some(message) = info.message() {
-        println!("Message: {}", message);
+        println!("  Message: {}", message);
     }
+    
+    println!("\n  The system will now halt. Please restart your computer.\n");
+    
     loop {
-        asm!("hlt");
+        unsafe {
+            core::arch::asm!("hlt");
+        }
     }
 }
 

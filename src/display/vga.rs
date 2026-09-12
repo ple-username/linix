@@ -1,4 +1,4 @@
-// VGA Text Mode Display Driver
+// VGA Display Driver - Enhanced with position control
 
 use core::fmt::{self, Write};
 use core::ptr;
@@ -82,6 +82,15 @@ impl VgaWriter {
 
     pub fn set_color(&mut self, foreground: Color, background: Color) {
         self.color = ColorCode::new(foreground, background);
+    }
+
+    pub fn put_char_at(&mut self, x: usize, y: usize, ch: char) {
+        if x < VGA_WIDTH && y < VGA_HEIGHT {
+            self.buffer[y][x] = VgaChar {
+                ascii: ch as u8,
+                color: self.color,
+            };
+        }
     }
 
     pub fn write_byte(&mut self, byte: u8) {

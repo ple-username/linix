@@ -1,49 +1,44 @@
-# LINIX OS Makefile
+# LINIX OS Makefile (Rust)
 
-CC = gcc
-AS = nasm
-LD = ld
-CFLAGS = -ffreestanding -fno-pie -m64
-ASFLAGS = -f elf64
+.PHONY: all build run clean test
 
-BOOTLOADER_ASM = bootloader/legacy/boot.asm
-KERNEL_ASM = kernel/arch/x86_64/boot.asm
-KERNEL_C = kernel/main.c kernel/vga.c
+CARGO = cargo
+NASM = nasm
+QEMU = qemu-system-x86_64
+TARGET = x86_64-unknown-none
 
-OBJ_FILES = kernel_boot.o kernel_main.o kernel_vga.o
-OUTPUT = linix.elf
-ISO_OUTPUT = linix.iso
+all: build
 
-.PHONY: all clean iso
+build:
+	@echo "[Building LINIX OS with Rust]"
+	$(CARGO) build --target $(TARGET) --release
 
-all: $(OUTPUT)
+bootloader:
+	@echo "[Assembling bootloader]"
+	$(NASM) -f bin src/bootloader.s -o boot.bin
 
-$(OUTPUT): $(OBJ_FILES)
-	$(LD) -T kernel.ld -o $@ $^
+run: build
+	@echo "[Running in QEMU]"
+	$(QEMU) -kernel target/$(TARGET)/release/linix_os -m 256M
 
-kernel_boot.o: $(KERNEL_ASM)
-	$(AS) $(ASFLAGS) -o $@ $<
-
-kernel_main.o: kernel/main.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-kernel_vga.o: kernel/vga.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-iso: all
-	@echo "Building ISO image..."
-	@echo "ISO support requires additional tools (grub, xorriso)"
+run-uefi: build
+	@echo "[Running UEFI mode in QEMU]"
+	$(QEMU) -bios /usr/share/ovmf/OVMF.fd -kernel target/$(TARGET)/release/linix_os -m 256M
 
 clean:
-	@echo "Cleaning build files..."
-	rm -f *.o *.elf *.iso
-	@echo "Clean complete!"
+	@echo "[Cleaning build artifacts]"
+	$(CARGO) clean
+	@rm -f boot.bin linix.iso
+
+test:
+	@echo "[Running tests]"
+	$(CARGO) test --target $(TARGET)
 
 help:
 	@echo "LINIX OS Build Targets:"
-	@echo "  make          - Build kernel ELF"
-	@echo "  make clean    - Remove build files"
-	@echo "  make iso      - Build bootable ISO"
-	@echo "  make help     - Show this message"
-
-.PRECIOUS: $(OBJ_FILES)
+	@echo "  make build     - Build kernel"
+	@echo "  make run       - Build and run in QEMU (Legacy BIOS)"
+	@echo "  make run-uefi  - Build and run in QEMU (UEFI mode)"
+	@echo "  make clean     - Remove build files"
+	@echo "  make test      - Run tests"
+	@echo "  make help      - Show this message"

@@ -1,64 +1,100 @@
-# LINIX OS
+# LINIX OS - Rust Edition
 
-Một hệ điều hành đơn giản hỗ trợ **Legacy BIOS** và **UEFI 64-bit** cho kiến trúc x86-64.
+Một hệ điều hành viết bằng **Rust** hỗ trợ **Legacy BIOS** và **UEFI 64-bit** với memory management an toàn.
 
 ## Cấu trúc Project
 
 ```
-linix/
-├── bootloader/
-│   ├── legacy/          # BIOS bootloader (16-bit real mode)
-│   │   └── boot.asm     # MBR bootloader
-│   └── uefi/            # UEFI bootloader (64-bit)
-│       └── main.c       # UEFI entry point
-├── kernel/
-│   ├── arch/x86_64/
-│   │   ├── boot.asm     # Kernel entry point (64-bit)
-│   │   └── gdt.c        # Global Descriptor Table
-│   ├── mm/
-│   │   └── paging.c     # Paging setup
-│   ├── main.c           # Kernel main
-│   └── vga.c            # VGA display driver
-├── Makefile             # Build script
-├── README.md            # This file
-└── .gitignore
+linix-rs/
+├── src/
+│   ├── main.rs              # Kernel entry point
+│   ├── bootloader.rs        # Bootloader setup
+│   ├── memory/
+│   │   ├── mod.rs           # Memory management
+│   │   ├── allocator.rs     # Custom allocator
+│   │   ├── paging.rs        # Page table management
+│   │   └── heap.rs          # Heap initialization
+│   ├── display/
+│   │   ├── mod.rs           # Display subsystem
+│   │   └── vga.rs           # VGA text mode
+│   ├── arch/
+│   │   └── x86_64/
+│   │       ├── mod.rs
+│   │       ├── boot.s        # Assembly entry
+│   │       ├── gdt.rs        # Global Descriptor Table
+│   │       └── interrupts.rs # Interrupt handling
+│   └── lib.rs
+├── Cargo.toml               # Rust dependencies
+├── Cargo.lock
+├── x86_64-unknown-none.json  # Rust target spec
+├── Makefile                 # Build script
+└── README.md
 ```
 
 ## Yêu cầu
 
-- **GCC Cross Compiler** (i686-elf-gcc, x86_64-elf-gcc)
-- **NASM** (Assembler)
+- **Rust** (nightly version)
+- **Cargo**
+- **NASM** (Assembler cho bootloader)
 - **QEMU** (để test)
-- **Make**
+- **Cross compiler** (x86_64-elf-gcc, optional)
+
+## Cài đặt Rust cho x86_64
+
+```bash
+rustup toolchain install nightly
+rustup target add x86_64-unknown-none
+rustup component add rust-src
+```
 
 ## Build
 
 ```bash
-make clean
-make
+cargo build --target x86_64-unknown-none --release
 ```
 
 ## Test với QEMU
 
 ```bash
 # Legacy BIOS
-qemu-system-x86_64 -drive format=raw,file=linix.iso -m 256M
+qemu-system-x86_64 -kernel target/x86_64-unknown-none/release/linix_os -m 256M
 
 # UEFI
-qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -drive format=raw,file=linix.iso -m 256M
+qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -kernel target/x86_64-unknown-none/release/linix_os -m 256M
 ```
 
 ## Tính năng Hiện tại
 
-- [x] Legacy BIOS bootloader
-- [x] UEFI bootloader
-- [ ] Kernel 64-bit
-- [ ] GDT setup
-- [ ] Paging
-- [ ] Interrupt handling
-- [ ] Shell
+- [x] Rust bootloader setup
+- [x] VGA display driver
+- [x] Memory management (allocator, paging)
+- [x] GDT configuration
+- [ ] Interrupt Descriptor Table (IDT)
+- [ ] Exception handling
+- [ ] Task management
 - [ ] Filesystem
+- [ ] Shell
 
-## Hướng dẫn Phát triển
+## Memory Management
 
-Xem chi tiết trong từng thư mục.
+### Allocator
+Custom allocator không dùng std library:
+- Bump allocator (simple, fast)
+- Linked list allocator (flexible)
+
+### Paging
+- Identity mapping (virtual = physical)
+- Page table management
+- Safe Rust abstractions
+
+### Heap
+- Dynamic memory allocation
+- Drop trait support
+- Ownership system
+
+## Tham khảo
+
+- [Writing an OS in Rust](https://os.phil-opp.com/)
+- [OSDev.org](https://wiki.osdev.org/)
+- [Rust Book](https://doc.rust-lang.org/book/)
+- [x86_64 Crate](https://docs.rs/x86_64/)

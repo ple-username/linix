@@ -1,0 +1,22 @@
+[package]
+name = "linix_os"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "linix_os"
+path = "src/lib.rs"
+
+[[bin]]
+name = "linix_os"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[dependencies]
+spin = "0.9"
+
+[build-dependencies]
